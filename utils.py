@@ -38,38 +38,46 @@ def collect_rollout(rollout_len, buffer, actor, critic, env, state):
             mean, std = actor(state_tensor)
             dist = Normal(mean, std)
 
-            action = dist.sample()
-            log_prob = dist.log_prob(action).sum(dim=-1)
-
             value = critic(state_tensor).squeeze()
         # mean, std = actor(state_tensor)
         # dist = Normal(mean, std)
 
         # action = dist.sample()
         # log_prob = dist.log_prob(action).sum(dim=-1)
-        raw_action = dist.sample()
-        log_prob = dist.log_prob(raw_action).sum(dim=-1)
+            raw_action = dist.sample()
+            action = torch.tanh(raw_action)
 
-        action_np = raw_action.cpu().numpy()
-        action_np = np.clip(
-            action_np,
-            env.action_space.low,
-            env.action_space.high
-        )
+            log_prob = dist.log_prob(raw_action).sum(dim=-1)
+            log_prob -= torch.log(1 - action.pow(2) + 1e-6).sum(dim=-1)
+
+        
+
+        action_np = action.cpu().numpy()
+        # action_np = np.clip(
+        #     action_np,
+        #     env.action_space.low,
+        #     env.action_space.high
+        # )
 
         next_state, reward, terminated, truncated, info = env.step(action_np)
         current_done = terminated or truncated
+
+        shaped_reward = reward + 5.0 * abs(next_state[1])
 
         # value = critic(state)
 
         buffer.add(
             state=state,
-            reward=reward,
-            action=raw_action.cpu().numpy(),
+            reward=shaped_reward,
+            action=action.cpu().numpy(),
             log_prob=log_prob.item(),
             value=value.item(),
             done=current_done
         )
+
+        if current_done:
+            next_state, info = env.reset()
+
         state = next_state
         # done = current_done
 

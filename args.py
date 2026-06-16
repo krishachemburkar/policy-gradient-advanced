@@ -87,4 +87,9 @@ parser.add_argument(
     default=42
 )
 
+parser.add_argument(
+    "--save_video", 
+    action="store_true"
+    )
+
 args = parser.parse_args()

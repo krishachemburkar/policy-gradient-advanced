@@ -16,13 +16,26 @@ def train_gae_actor_critic(
     mean, std = actor(states)
     dist = Normal(mean, std)
 
-    log_probs = dist.log_prob(actions).sum(dim=-1)
+    # actions are tanh-squashed, so they are in [-1, 1]
+    # clamp is needed because atanh(-1) or atanh(1) is infinite
+    actions = torch.clamp(actions, -0.999999, 0.999999)
 
-    print("mean nan:", torch.isnan(mean).any())
-    print("std nan:", torch.isnan(std).any())
-    print("actions nan:", torch.isnan(actions).any())
-    print("advantages nan:", torch.isnan(advantages).any())
-    print("returns nan:", torch.isnan(returns).any())
+    # recover the raw Gaussian action before tanh
+    raw_actions = torch.atanh(actions)
+
+    # log probability under the raw Gaussian
+    log_probs = dist.log_prob(raw_actions).sum(dim=-1)
+
+    # tanh correction term
+    log_probs -= torch.log(1 - actions.pow(2) + 1e-6).sum(dim=-1)
+
+    # print("mean nan:", torch.isnan(mean).any())
+    # print("std nan:", torch.isnan(std).any())
+    # print("actions nan:", torch.isnan(actions).any())
+    # print("raw_actions nan:", torch.isnan(raw_actions).any())
+    # print("log_probs nan:", torch.isnan(log_probs).any())
+    # print("advantages nan:", torch.isnan(advantages).any())
+    # print("returns nan:", torch.isnan(returns).any())
 
     actor_loss = -(log_probs * advantages).mean()
 

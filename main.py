@@ -4,7 +4,7 @@ from gymnasium.wrappers import RecordVideo
 import torch
 import numpy as np
 
-from torch.distributions import Normal
+# from torch.distributions import Normal
 from torch.optim import Adam
 
 from args import args

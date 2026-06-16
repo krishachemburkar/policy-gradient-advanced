@@ -13,11 +13,11 @@ class PolicyNetwork(nn.Module):
             nn.Tanh(),
             nn.Linear(hidden_size, action_dim))
 
-        self.log_std = nn.Parameter(torch.zeros(action_dim))
+        self.log_std = nn.Parameter(torch.zeros(action_dim)* 0.5)
 
     def forward(self, state):
         mean = self.net(state)
-        log_std = torch.clamp(self.log_std, -5, 1)
+        log_std = torch.clamp(self.log_std, -5, 2)
         std = torch.exp(log_std)
 
         return mean, std
